@@ -59,20 +59,29 @@ const globalEnv = {
 
   const sExpressionParser = (expr, env = globalEnv) => {
       expr = expr.trim()
-      let result = expressionParser(expr, env= globalEnv)
+      let result = expressionParser(expr, env= globalEnv) || specialFormParser(expr, env= globalEnv)
       if (result) return result
       return null
+  }
+
+  const specialFormParser = (expr, env = globalEnv) => {
+    if (expr.startsWith('(')){
+        expr = spaceParser( expr.slice(1))
+        return ifParser(expr , env) || defineParser(expr) 
+    }
   }
 
   const expressionParser = (expr ,env = globalEnv) => {
     if (expr.startsWith('(')){
         expr = spaceParser( expr.slice(1))
-        return procedurecall(expr,env) || ifParser(expr , env) 
+        return procedurecall(expr,env)
     }
+    let atom = atomParse(expr, env)
+    if (!atom) return null
+    return [atom[0],atom[1]]
   }
    const atomParse = ( expr ,env = globalEnv)=> {
     expr = expr.trim()
-    //console.log(expr)
     let atom = numberParser(expr)
     return atom
  }
@@ -123,7 +132,7 @@ const globalEnv = {
     condition = result[0]
     expr = spaceParser(result[1])
     if (condition) {
-      result = sExpressionParser(expr, env) || atomParse(expr , env)
+      result = sExpressionParser(expr, env) 
       if (!result) return null
       expr = contentParse(result[1])[1]
       if (!expr) return null
@@ -132,11 +141,29 @@ const globalEnv = {
       return [result[0], expr.slice(1)]
     }
     expr = contentParse(result[1])[1]
-    result = sExpressionParser(expr, env) || atomParse(expr , env)
+    result = sExpressionParser(expr, env)
     if (!result) return null
     expr = spaceParser(result[1])
     if (expr[0] !== ')') return null
     return [result[0], expr.slice(1)]
   }
+
+  const defineParser = ( expr ) => {
+    if (! expr.startsWith('define')) return null
+    expr = spaceParser(expr.slice(6))
+    let symbol = symbolParser(expr)
+    if(!symbol) return null
+    expr = symbol[1]
+    symbol = symbol[0]
+    
+    let value = sExpressionParser(expr)
+    if(!value) return null
+    expr = value[1]
+    expr = spaceParser(value[1])
+    if (expr[0] !== ')') return null
+    globalEnv[symbol] = value[0]
+    return [symbol, expr.slice(1)]
+  }
   
-  console.log(eval('( if ( < 3 2 ) 3 (if ( < 4 3 ) 33 44 ) )'))
+  console.log(eval('(define r 10 )'))
+  console.log(globalEnv)
