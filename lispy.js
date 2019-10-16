@@ -72,7 +72,7 @@ const sExpressionParser = (expr, env = globalEnv) => {
 const specialFormParser = (expr, env = globalEnv) => {
   if (expr.startsWith('(')) {
     expr = spaceParser(expr.slice(1))
-    return ifParser(expr, env) || defineParser(expr) || beginParser(expr,env)
+    return ifParser(expr, env) || defineParser(expr) || beginParser(expr,env) || quoteParser(expr)
   }
 }
 
@@ -182,8 +182,19 @@ const beginParser = (expr, env = globalEnv) => {
   return (expr !== ')') ? null : [ result[0], expr.slice(1) ]
 }
 
+const quoteParser = (expr) => {
+  if (!expr.startsWith('quote')) return null
+  expr = spaceParser(expr.slice(5))
+  let result = contentParse(expr)
+  if (!result) return null
+  if (spaceParser(result[1]) !== ')') return null
+  return [result[0] , spaceParser(result[1]).slice(1)]
+}
+
 console.log(eval('(define r 10 )'))
 console.log(eval('(define c 2 )'))
 console.log(eval('( + r c ( * r c) 5 5)'))
 console.log (eval('( begin ( + 2 3 ) (+ 4 5 )  (define e 4444 ) (+ 100 100))'))
 console.log(eval('e'))
+console.log(eval('(quote ( begin ( + 2 3 ) (+ 4 5 )  (define e 4444 ) (+ 100 100)) )'))
+console.log(eval('(quote 2 )'))
