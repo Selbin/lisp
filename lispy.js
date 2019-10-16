@@ -8,6 +8,7 @@ const globalEnv = {
   '>': (op1, op2) => Number(op1) > Number(op2),
   pi: Math.PI,
 }
+const funcEnv = {}
 
 const contentParse = input => {
   let result
@@ -57,8 +58,6 @@ const symbolParser = input => {
 
 const eval = expr => {
   let result = sExpressionParser(expr, globalEnv)
-  //console.log(result)
-  //console.log(result)
   return !result || result[1] !== '' ? 'Invalid' : result[0]
 }
 
@@ -72,7 +71,7 @@ const sExpressionParser = (expr, env = globalEnv) => {
 const specialFormParser = (expr, env = globalEnv) => {
   if (expr.startsWith('(')) {
     expr = spaceParser(expr.slice(1))
-    return ifParser(expr, env) || defineParser(expr) || beginParser(expr,env) || quoteParser(expr)
+    return ifParser(expr, env) || defineParser(expr) || beginParser(expr,env) || quoteParser(expr) || lambdaParser(expr)
   }
 }
 
@@ -161,12 +160,15 @@ const defineParser = expr => {
   if (!symbol) return null
   expr = symbol[1]
   symbol = symbol[0]
-
   let value = sExpressionParser(expr)
   if (!value) return null
-  expr = value[1]
   expr = spaceParser(value[1])
   if (expr[0] !== ')') return null
+  if (typeof value[0] === 'object'){
+    funcEnv[symbol] ={ args: value[0][0], body: value[0][1], local: {}, parent : globalEnv}
+    return [funcEnv, expr.slice(1)]
+
+  }
   globalEnv[symbol] = value[0]
   return [symbol, expr.slice(1)]
 }
@@ -191,10 +193,29 @@ const quoteParser = (expr) => {
   return [result[0] , spaceParser(result[1]).slice(1)]
 }
 
+const lambdaParser = (expr) => {
+  let args = []
+  if (!expr.startsWith('lambda')) return null
+  expr = spaceParser(spaceParser(expr.slice(6)).slice(1))
+  while ( !expr.startsWith(')') ){
+    let arg = symbolParser(expr)
+    if( !args) return null
+    args.push(arg[0])
+    expr =spaceParser(arg[1])
+  }
+  if(expr[0] !== ")") return null
+  expr= spaceParser(expr.slice(1))
+  let body = contentParse(expr)
+  if( !body) return null
+  let setFunc =[args,body[0]]
+  return [[args,body[0]],spaceParser(body[1]).slice(1)]
+  
+}
 console.log(eval('(define r 10 )'))
 console.log(eval('(define c 2 )'))
 console.log(eval('( + r c ( * r c) 5 5)'))
 console.log (eval('( begin ( + 2 3 ) (+ 4 5 )  (define e 4444 ) (+ 100 100))'))
-console.log(eval('e'))
+console.log(eval('77'))
 console.log(eval('(quote ( begin ( + 2 3 ) (+ 4 5 )  (define e 4444 ) (+ 100 100)) )'))
 console.log(eval('(quote 2 )'))
+console.log(eval('(define fact (lambda(x)(if(< x 1) 1 (* x (fact(- x 1))))))'))
