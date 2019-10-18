@@ -6,6 +6,8 @@ const globalEnv = {
   '/': (op1, op2) => Number(op1) / Number(op2),
   '<': (op1, op2) => Number(op1) < Number(op2),
   '>': (op1, op2) => Number(op1) > Number(op2),
+  '<=': (op1, op2) => Number(op1) <= Number(op2),
+  '>=': (op1, op2) => Number(op1) >= Number(op2),
   pi: Math.PI,
 }
 const funcEnv = {}
@@ -37,12 +39,8 @@ const contentParse = input => {
 }
 
 const numberParser = input => {
-  const result = input.match(
-    /^-?([1-9][0-9]*(\.[0-9]+)?((e|E)[-+]?[0-9]+)?|0(\.[0-9]+)?((e|E)[-+]?[0-9]+)?)/
-  )
-  return result === null || result[0] === ''
-    ? null
-    : [result[0] * 1, input.slice(result[0].length)]
+  const result = input.match(/^-?([1-9][0-9]*(\.[0-9]+)?((e|E)[-+]?[0-9]+)?|0(\.[0-9]+)?((e|E)[-+]?[0-9]+)?)/)
+  return result === null || result[0] === '' ? null : [result[0] * 1, input.slice(result[0].length)]
 }
 
 const spaceParser = input => {
@@ -51,19 +49,19 @@ const spaceParser = input => {
 }
 
 const symbolParser = input => {
-  result = input.match(/^(([a-zA-Z_]+)|(\+|-|>=|<=|>|<|=|\*|\\))/)
+  result = input.match(/^(([a-zA-Z_]+)|(\+|-|>=|<=|>|<|=|\*|\/))/)
   if (!result) return null
   return [result[0], input.slice(result[0].length)]
 }
 
-const eval = expr => {
-  let result = sExpressionParser(expr, globalEnv)
+const eval = (expr,env=globalEnv) => {
+  let result = sExpressionParser(expr, env)
   return !result || result[1] !== '' ? 'Invalid' : result[0]
 }
 
 const sExpressionParser = (expr, env = globalEnv) => {
   expr = expr.trim()
-  let result = expressionParser(expr, (env = globalEnv)) || specialFormParser(expr, (env = globalEnv))
+  let result = specialFormParser(expr,env) || expressionParser(expr,env) 
   if (result) return result
   return null
 }
@@ -87,10 +85,11 @@ const expressionParser = (expr, env = globalEnv) => {
 
 const atomParse = (expr, env = globalEnv) => {
   expr = expr.trim()
-  let atom = numberParser(expr) || [
-    env[symbolParser(expr)[0]],
-    symbolParser(expr)[1],
-  ]
+  let atom = numberParser(expr) || [env[symbolParser(expr)[0]],spaceParser(symbolParser(expr)[1])]
+  if (atom[0] === null || atom[0] === undefined){
+    let atom = [globalEnv[symbolParser(expr)[0]] ,spaceParser(symbolParser(expr)[1])]
+    return atom
+  }
   return atom
 }
 
@@ -100,7 +99,7 @@ const procedurecall = (expr, env = globalEnv) => {
   if (op === null) return null
   expr = op[1]
   op = op[0]
-  if (op in env) {
+  if (op in globalEnv) {
     while (expr[0] !== ')') {
       expr = spaceParser(expr)
       if (expr[0] == '(') {
@@ -111,7 +110,7 @@ const procedurecall = (expr, env = globalEnv) => {
         expr = spaceParser(expr)
         continue
       }
-      const value = numberParser(expr) || atomParse(expr)
+      const value = numberParser(expr) || atomParse(expr,env)
       if (value !== null) {
         expr = value[1]
         expr = spaceParser(expr)
@@ -122,9 +121,30 @@ const procedurecall = (expr, env = globalEnv) => {
     }
     if (operands.length === 1 && op === '/') operands.unshift(1)
     if (operands.length === 1 && op === '-') operands.unshift(0)
-    result = operands.reduce(env[op])
-    return [result, expr.slice(1)]
+    result = operands.reduce(globalEnv[op])
+    return [result, spaceParser(expr).slice(1)]
   }
+  if (op in funcEnv){
+    let i = 0
+    while (expr[0] !== ')') {
+      expr = spaceParser(expr)
+      let arg = sExpressionParser(expr,env)
+      if(!arg) return null
+      console.log(arg)
+      let param = funcEnv[op]['args'][i]
+      funcEnv[op][param] = arg[0]
+      expr =arg[1]
+      expr = spaceParser(expr)
+      i++
+  }
+
+  if(expr[0] !== ')') return null
+  let result = sExpressionParser(funcEnv[op]['body'],funcEnv[op])
+  if(!result) return null
+  //console.log(result)
+  return [result[0],spaceParser(result[1].slice(1))]
+}
+return null
 }
 
 const ifParser = (expr, env = globalEnv) => {
@@ -132,7 +152,7 @@ const ifParser = (expr, env = globalEnv) => {
   let condition
   let result
   expr = spaceParser(expr.slice(2))
-  result = sExpressionParser(expr, env)
+  result = procedurecall(spaceParser(expr).slice(1), env)
   if (!result) return null
   condition = result[0]
   expr = spaceParser(result[1])
@@ -165,8 +185,8 @@ const defineParser = expr => {
   expr = spaceParser(value[1])
   if (expr[0] !== ')') return null
   if (typeof value[0] === 'object'){
-    funcEnv[symbol] ={ args: value[0][0], body: value[0][1], local: {}, parent : globalEnv}
-    return [funcEnv, expr.slice(1)]
+    funcEnv[symbol] ={ args: value[0][0], body: value[0][1], parent : globalEnv}
+    return ['done', expr.slice(1)]
 
   }
   globalEnv[symbol] = value[0]
@@ -199,7 +219,7 @@ const lambdaParser = (expr) => {
   expr = spaceParser(spaceParser(expr.slice(6)).slice(1))
   while ( !expr.startsWith(')') ){
     let arg = symbolParser(expr)
-    if( !args) return null
+    if( !arg) return null
     args.push(arg[0])
     expr =spaceParser(arg[1])
   }
@@ -207,15 +227,16 @@ const lambdaParser = (expr) => {
   expr= spaceParser(expr.slice(1))
   let body = contentParse(expr)
   if( !body) return null
-  let setFunc =[args,body[0]]
   return [[args,body[0]],spaceParser(body[1]).slice(1)]
   
 }
-console.log(eval('(define r 10 )'))
-console.log(eval('(define c 2 )'))
-console.log(eval('( + r c ( * r c) 5 5)'))
-console.log (eval('( begin ( + 2 3 ) (+ 4 5 )  (define e 4444 ) (+ 100 100))'))
-console.log(eval('77'))
-console.log(eval('(quote ( begin ( + 2 3 ) (+ 4 5 )  (define e 4444 ) (+ 100 100)) )'))
-console.log(eval('(quote 2 )'))
-console.log(eval('(define fact (lambda(x)(if(< x 1) 1 (* x (fact(- x 1))))))'))
+//console.log(eval('(define circlearea (lambda (r) (* pi (* r r))))')[0])
+console.log(eval('(define fact (lambda(x)(if(<= x 1) 1 (* x ( fact(- x 1 ) ) ))))'))
+// console.log(eval('(define sum (lambda(x y) (+ x y) ) )'))
+// console.log(eval('(sum 2 3 )'))
+// console.log (eval('( begin ( + 2 3 ) (+ 4 5 )  (define e 4444 ) (+ 100 100))'))
+// console.log(eval('77'))
+// console.log(eval('(quote ( begin ( + 2 3 ) (+ 4 5 )  (define e 4444 ) (+ 100 100)) )'))
+// console.log(eval('(quote 2 )'))
+ //console.log(eval('(circlearea (+ 6 2 ) )'))
+console.log(eval('(fact  6 )'))
