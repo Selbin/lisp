@@ -16,7 +16,7 @@ const contentParse = input => {
   let result
   input = spaceParser(input)
   if ((result = numberParser(input))) return [result[0], result[1]]
-  else if ((result = symbolParser(input))) return [result[0], result[1]]
+  if ((result = symbolParser(input))) return [result[0], result[1]]
   if (input[0] === '(') {
     result = '('
     let count = 1
@@ -86,10 +86,8 @@ const expressionParser = (expr, env = globalEnv) => {
 const atomParse = (expr, env = globalEnv) => {
   expr = expr.trim()
   let atom = numberParser(expr) || [env[symbolParser(expr)[0]],spaceParser(symbolParser(expr)[1])]
-  if (atom[0] === null || atom[0] === undefined){
-    let atom = [globalEnv[symbolParser(expr)[0]] ,spaceParser(symbolParser(expr)[1])]
-    return atom
-  }
+  if (atom[0] === null || atom[0] === undefined)
+    return [globalEnv[symbolParser(expr)[0]] ,spaceParser(symbolParser(expr)[1])]
   return atom
 }
 
@@ -99,6 +97,8 @@ const procedurecall = (expr, env = globalEnv) => {
   if (op === null) return null
   expr = op[1]
   op = op[0]
+expr[0] !== ')'
+  //console.log(op)
   if (op in globalEnv) {
     while (expr[0] !== ')') {
       expr = spaceParser(expr)
@@ -130,19 +130,17 @@ const procedurecall = (expr, env = globalEnv) => {
       expr = spaceParser(expr)
       let arg = sExpressionParser(expr,env)
       if(!arg) return null
-      console.log(arg)
+      //console.log(arg)
       let param = funcEnv[op]['args'][i]
       funcEnv[op][param] = arg[0]
       expr =arg[1]
       expr = spaceParser(expr)
       i++
   }
-
   if(expr[0] !== ')') return null
   let result = sExpressionParser(funcEnv[op]['body'],funcEnv[op])
   if(!result) return null
-  //console.log(result)
-  return [result[0],spaceParser(result[1].slice(1))]
+  return [result[0],spaceParser(expr.slice(1))]
 }
 return null
 }
@@ -230,13 +228,13 @@ const lambdaParser = (expr) => {
   return [[args,body[0]],spaceParser(body[1]).slice(1)]
   
 }
-//console.log(eval('(define circlearea (lambda (r) (* pi (* r r))))')[0])
+console.log(eval('(define circlearea (lambda (r) (* pi (* r r))))')[0])
 console.log(eval('(define fact (lambda(x)(if(<= x 1) 1 (* x ( fact(- x 1 ) ) ))))'))
-// console.log(eval('(define sum (lambda(x y) (+ x y) ) )'))
-// console.log(eval('(sum 2 3 )'))
-// console.log (eval('( begin ( + 2 3 ) (+ 4 5 )  (define e 4444 ) (+ 100 100))'))
-// console.log(eval('77'))
-// console.log(eval('(quote ( begin ( + 2 3 ) (+ 4 5 )  (define e 4444 ) (+ 100 100)) )'))
-// console.log(eval('(quote 2 )'))
- //console.log(eval('(circlearea (+ 6 2 ) )'))
-console.log(eval('(fact  6 )'))
+console.log(eval('(define sum (lambda(x y) (+ x y) ) )'))
+console.log(eval('(sum 2 3 )'))
+console.log (eval('( begin ( + 2 3 ) (+ 4 5 )  (define e 4444 ) (+ 100 100))'))
+console.log(eval('77'))
+console.log(eval('(quote ( begin ( + 2 3 ) (+ 4 5 )  (define e 4444 ) (+ 100 100)) )'))
+console.log(eval('(quote 2 )'))
+console.log(eval('(circlearea (+ 6 2 ) )'))
+console.log(eval('(fact  5 )'))
