@@ -11,18 +11,16 @@ const globalEnv = {
   pi: Math.PI,
   func: {},
 }
-let count = 0
 let copyEnv = {}
 const contentParse = input => {
   let result
   input = spaceParser(input)
-  if ((result = numberParser(input))) return [result[0], result[1]]
-  if ((result = symbolParser(input))) return [result[0], result[1]]
+  if (result = numberParser(input) ||  symbolParser(input) ) return [result[0], result[1]]
   if (input[0] === '(') {
     result = '('
     let count = 1
     input = input.slice(1)
-    while (count >= 0) {
+    while (count >= 0 && input.length > 1){
       if (input[0] === '(') count++
       if (input[0] === ')') count--
       if (count === 0) {
@@ -35,7 +33,6 @@ const contentParse = input => {
       input = input.slice(1)
     }
   }
-
   return null
 }
 
@@ -72,6 +69,7 @@ const specialFormParser = (expr, env = globalEnv) => {
     expr = spaceParser(expr.slice(1))
     return (ifParser(expr, env) || defineParser(expr) || beginParser(expr, env) || quoteParser(expr) || lambdaParser(expr))
   }
+  return null
 }
 
 const expressionParser = (expr, env = globalEnv) => {
@@ -79,6 +77,7 @@ const expressionParser = (expr, env = globalEnv) => {
     expr = spaceParser(expr.slice(1))
     return procedurecall(expr, env)
   }
+  if(!expr.length >= 1 ) return null
   let atom = atomParse(expr, env)
   if (!atom) return null
   return [atom[0], atom[1]]
@@ -124,6 +123,7 @@ const procedurecall = (expr, env = globalEnv) => {
       if (!arg) return null
       let param = globalEnv.func[op]['args'][i]
       copyEnv[param] = arg[0]
+      copyEnv['parent'] = JSON.parse(JSON.stringify(env))
       expr = arg[1]
       expr = spaceParser(expr)
       i++
@@ -184,7 +184,7 @@ const beginParser = (expr, env = globalEnv) => {
   let result
   if (!expr.startsWith('begin')) return null
   expr = spaceParser(expr.slice(5))
-  while (!expr.startsWith(')')) {
+  while (!expr.startsWith(')') && expr.length>1) {
     result = sExpressionParser(expr, env)
     expr = spaceParser(result[1])
   }
@@ -223,18 +223,12 @@ console.log(eval('(define circlearea (lambda (r) (* pi (* r r))))'))
 console.log(eval('(define fact (lambda(x)(if(<= x 1) 1 (* x ( fact(- x 1 ) ) ))))'))
 console.log(eval('(define sum (lambda(x y) (+ x y) ) )'))
 console.log(eval('(define fib (lambda (n) (if (< n 2) 1 (+ (fib (- n 1)) (fib (- n 2))))))'))
-console.log(eval('(define repeat (lambda (f) (lambda (x) (f (f x)))))'))
-console.log(eval('(define twice (lambda (x) (* 2 x)))'))
-console.log(eval('( fact 5 )'))
 console.log(eval('( fib 5 )'))
 console.log(eval('(sum (+(fact (- 6 1) ) (fact 5)) 5 )'))
 console.log(eval('(+ 2 3 (* 5 2 (* 1 2 ) ) 4 5 )'))
 console.log(eval('( if ( < 3 2 ) 3 (if (> 4 3 ) 33 44 ))'))
 console.log(eval('(circlearea (fact (fact 3)) )'))
-//console.log(globalEnv.func['sum']['args'])
-// console.log(eval('(sum (+(fact (- 6 1) ) (fact 5)) 5 )'))
-// console.log (eval('( begin ( + 2 3 ) (+ 4 5 )  (define e 4444 ) (+ 100 100))'))
-// console.log(eval('(quote ( begin ( + 2 3 ) (+ 4 5 )  (define e 4444 ) (+ 100 100)) )'))
+console.log (eval('( begin ( + 2 3 ) (+ 4 5 )  (define e 4444 ) (+ 100 100))'))
+console.log(eval('(quote ( begin ( + 2 3 ) (+ 4 5 )  (define e 4444 ) (+ 100 100)) )'))
 console.log(eval('(- 2 )'))
-// console.log(eval('(circlearea (fact (fact 3)) )'))
-//  console.log(globalEnv)
+console.log(eval('(circlearea (fact (fact 3)) )'))
