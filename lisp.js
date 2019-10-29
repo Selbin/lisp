@@ -12,26 +12,6 @@ const globalEnv = {
   func: {},
 }
 let copyEnv = {}
-
-const findFunc = (op ,env = globalEnv) => {
- try{
-   do{
-   try {
-    if( env.func[op] !== undefined) return env
-    env = env.parent
-   } catch (error) {
-    env= env.parent
-   }
-  
-  
-  } while (env.parent !== null || env.parent !== undefined )
- return null 
- }
- catch(e){
-   return null
- }
-}
-
 const contentParse = input => {
   let result
   input = spaceParser(input)
@@ -77,17 +57,17 @@ const eval = (expr, env = globalEnv) => {
   return !result || result[1] !== '' ? 'Invalid' : result[0]
 }
 
-const sExpressionParser = (expr, env = globalEnv) => {
+const sExpressionParser = (expr, env = null) => {
   expr = expr.trim()
   let result = specialFormParser(expr, env) || expressionParser(expr, env)
   if (result) return result
   return null
 }
 
-const specialFormParser = (expr, env = globalEnv) => {
+const specialFormParser = (expr, env = null) => {
   if (expr.startsWith('(')) {
     expr = spaceParser(expr.slice(1))
-    return (ifParser(expr, env) || defineParser(expr, env) || beginParser(expr, env) || quoteParser(expr) || lambdaParser(expr, env)) || lambdaEval(expr, env)
+    return (ifParser(expr, env) || defineParser(expr) || beginParser(expr, env) || quoteParser(expr) || lambdaParser(expr, env)) || lambdaEval(expr, env)
   }
   return null
 }
@@ -98,7 +78,7 @@ const expressionParser = (expr, env = globalEnv) => {
     return procedurecall(expr, env)
   }
   if(!expr.length >= 1 ) return null
-  let atom = atomParse(expr, env) || symbolParser(expr,env)
+  let atom = atomParse(expr, env)
   if (!atom) return null
   return [atom[0], atom[1]]
 }
@@ -112,14 +92,15 @@ const atomParse = (expr, env = globalEnv) => {
     return [ env.parent[symbolParser(expr)[0]], spaceParser(symbolParser(expr)[1])]
   return atom 
   }catch(e){ 
-    return null
-    // try {// for function 
-    //     atom = globalEnv.func[symbolParser(expr)[0]]['body']
-    //     if (atom[0] === null || atom[0] === undefined) return null
-    //     return [symbolParser(expr)[0], spaceParser(symbolParser(expr)[1])]
-    //   } catch (e) {
-    //     return null
-    // }
+    try {// for function 
+        atom = globalEnv.func[symbolParser(expr)[0]]['body']
+        if (atom[0] === null || atom[0] === undefined) return null
+        console.log("Ssssssssssssssssss",expr)
+        console.log(symbolParser(expr)[0])
+        return [symbolParser(expr)[0], spaceParser(symbolParser(expr)[1])]
+      } catch (e) {
+        return null
+    }
   }
 }
 
@@ -146,15 +127,14 @@ const procedurecall = (expr, env = globalEnv) => {
     result = operands.reduce(globalEnv[op])
     return [result, spaceParser(expr).slice(1)]
   }
-  let func = findFunc(op, env)
-  if (func) {
+  if (op in globalEnv.func) {
     let i = 0
-    copyEnv = JSON.parse(JSON.stringify(func.func[op]))
+    copyEnv = JSON.parse(JSON.stringify(globalEnv.func[op]))
     while (expr[0] !== ')' && expr.length > 1) {
       expr = spaceParser(expr)
       let arg = sExpressionParser(expr, env)
       if (!arg) return null
-      let param = func.func[op]['args'][i]
+      let param = globalEnv.func[op]['args'][i]
       copyEnv[param] = arg[0]
       copyEnv['parent'] = JSON.parse(JSON.stringify(env))
       expr = arg[1]
@@ -162,11 +142,14 @@ const procedurecall = (expr, env = globalEnv) => {
       i++
     }
     if (expr[0] !== ')') return null
-    let result = sExpressionParser(func.func[op]['body'], copyEnv)
+    let result = sExpressionParser(globalEnv.func[op]['body'], copyEnv)
     if (!result) return null
     return [result[0], spaceParser(expr.slice(1)),copyEnv]
   }
-return null
+  let funcReplace = atomParse(op,env)
+  if(!funcReplace) return null
+  expr =('('+ op + expr).replace(new RegExp(op , 'g') ,funcReplace[0])
+  return sExpressionParser(expr,env)
 }
 
 const ifParser = (expr, env = globalEnv) => {
@@ -194,7 +177,7 @@ const ifParser = (expr, env = globalEnv) => {
   return [result[0], expr.slice(1)]
 }
 
-const defineParser = (expr, env) => {
+const defineParser = expr => {
   if (!expr.startsWith('define')) return null
   expr = spaceParser(expr.slice(6))
   let symbol = symbolParser(expr)
@@ -206,10 +189,10 @@ const defineParser = (expr, env) => {
   expr = spaceParser(value[1])
   if (expr[0] !== ')') return null
   if (typeof value[0] === 'object') {
-    env.func[symbol] = value[0]
+    globalEnv.func[symbol] = value[0]
     return [symbol, expr.slice(1)]
   }
-  env[symbol] = value[0]
+  globalEnv[symbol] = value[0]
   return [symbol, expr.slice(1)]
 }
 
@@ -249,7 +232,7 @@ const lambdaParser = (expr, env = null)  => {
   expr = spaceParser(expr.slice(1))
   let body = contentParse(expr)
   if (!body) return null
-  return [ { 'args' : args, 'body':body[0], 'parent' : null }, spaceParser(body[1]).slice(1)]
+  return [ { 'args' : args, 'body':body[0], 'parent' : env }, spaceParser(body[1]).slice(1)]
 }
 
 const lambdaEval = (expr , env = globalEnv) => {
@@ -268,18 +251,17 @@ const lambdaEval = (expr , env = globalEnv) => {
     expr = spaceParser(expr)
     i++
   }
-  funcObj.parent = copyEnv
   console.log(funcObj)
   if(expr[0] !== ')') return null
   return sExpressionParser(funcObj['body'], funcObj)
+
 }
 
-
-// console.log(eval('(define circlearea (lambda (r) (* pi (* r r))))'))
+//  console.log(eval('(define circlearea (lambda (r) (* pi (* r r))))'))
 // console.log(eval('(define fact (lambda(x)(if(<= x 1) 1 (* x ( fact(- x 1 ) ) ))))'))
 // console.log(eval('(define sum (lambda(x y) (+ x y) ) )'))
-//  console.log(eval('(define fib (lambda (n) (if (< n 2) 1 (+ (fib (- n 1)) (fib (- n 2))))))'))
-//  console.log(eval('( fib 5 )'))
+// console.log(eval('(define fib (lambda (n) (if (< n 2) 1 (+ (fib (- n 1)) (fib (- n 2))))))'))
+// console.log(eval('( fib 5 )'))
 // console.log(eval('(sum (+(fact (- 6 1) ) (fact 5)) 5 )'))
 // console.log(eval('(+ 2 3 (* 5 2 (* 1 2 ) ) 4 5 )'))
 // console.log(eval('( if ( < 3 2 ) 3 (if (> 4 3 ) 33 44 ))'))
@@ -290,6 +272,4 @@ const lambdaEval = (expr , env = globalEnv) => {
 // console.log(eval('(circlearea (fact (fact 3)) )'))
 console.log(eval('(define repeat (lambda (f) (lambda (x) (f (f x)))))'))
 console.log(eval('(define twice (lambda (x) (* 2 x)))'))
-console.log(eval('((repeat(repeat twice))10)'))
-//  console.log(eval('( define k ( lambda(y) (lambda (m)(+ m y) ) ) )'))
-// console.log(eval('((k 10) 20)'))
+console.log(eval('((repeat twice)10)'))
