@@ -8,8 +8,8 @@ const globalEnv = {
   '>': (op1, op2) => Number(op1) > Number(op2),
   '<=': (op1, op2) => Number(op1) <= Number(op2),
   '>=': (op1, op2) => Number(op1) >= Number(op2),
-  pi: Math.PI,
-  func: {},
+  pi: Math.PI
+  
 }
 let copyEnv = {}
 
@@ -17,7 +17,7 @@ const findFunc = (op ,env = globalEnv) => {
  try{
    do{
    try {
-    if( env.func[op] !== undefined) return env
+    if( env[op] !== undefined) return env
     env = env.parent
    } catch (error) {
     env= env.parent
@@ -113,13 +113,6 @@ const atomParse = (expr, env = globalEnv) => {
   return atom 
   }catch(e){ 
     return null
-    // try {// for function 
-    //     atom = globalEnv.func[symbolParser(expr)[0]]['body']
-    //     if (atom[0] === null || atom[0] === undefined) return null
-    //     return [symbolParser(expr)[0], spaceParser(symbolParser(expr)[1])]
-    //   } catch (e) {
-    //     return null
-    // }
   }
 }
 
@@ -129,7 +122,7 @@ const procedurecall = (expr, env = globalEnv) => {
   if (op === null) return null
   expr = op[1]
   op = op[0]
-  if (op in globalEnv) {
+  if (op in globalEnv && typeof globalEnv[op] !== 'object') {
     while (expr[0] !== ')') {
       expr = spaceParser(expr)
       const value = sExpressionParser(expr, env) || numberParser(expr) || atomParse(expr, env)
@@ -149,12 +142,12 @@ const procedurecall = (expr, env = globalEnv) => {
   let func = findFunc(op, env)
   if (func) {
     let i = 0
-    copyEnv = JSON.parse(JSON.stringify(func.func[op]))
+    copyEnv = JSON.parse(JSON.stringify(func[op]))
     while (expr[0] !== ')' && expr.length > 1) {
       expr = spaceParser(expr)
       let arg = sExpressionParser(expr, env)
       if (!arg) return null
-      let param = func.func[op]['args'][i]
+      let param = func[op]['args'][i]
       copyEnv[param] = arg[0]
       copyEnv['parent'] = JSON.parse(JSON.stringify(env))
       expr = arg[1]
@@ -162,7 +155,7 @@ const procedurecall = (expr, env = globalEnv) => {
       i++
     }
     if (expr[0] !== ')') return null
-    let result = sExpressionParser(func.func[op]['body'], copyEnv)
+    let result = sExpressionParser(func[op]['body'], copyEnv)
     if (!result) return null
     return [result[0], spaceParser(expr.slice(1)),copyEnv]
   }
@@ -206,7 +199,7 @@ const defineParser = (expr, env) => {
   expr = spaceParser(value[1])
   if (expr[0] !== ')') return null
   if (typeof value[0] === 'object') {
-    env.func[symbol] = value[0]
+    env[symbol] = value[0]
     return [symbol, expr.slice(1)]
   }
   env[symbol] = value[0]
@@ -249,7 +242,8 @@ const lambdaParser = (expr, env = null)  => {
   expr = spaceParser(expr.slice(1))
   let body = contentParse(expr)
   if (!body) return null
-  return [ { 'args' : args, 'body':body[0], 'parent' : null }, spaceParser(body[1]).slice(1)]
+  env =JSON.parse(JSON.stringify(env))
+  return [ { 'args' : args, 'body':body[0], 'parent' : env }, spaceParser(body[1]).slice(1)]
 }
 
 const lambdaEval = (expr , env = globalEnv) => {
@@ -268,14 +262,13 @@ const lambdaEval = (expr , env = globalEnv) => {
     expr = spaceParser(expr)
     i++
   }
-  funcObj.parent = copyEnv
-  console.log(funcObj)
+  // funcObj.parent = copyEnv
   if(expr[0] !== ')') return null
   return sExpressionParser(funcObj['body'], funcObj)
 }
 
 
-// console.log(eval('(define circlearea (lambda (r) (* pi (* r r))))'))
+//  console.log(eval('(define circlearea (lambda (r) (* pi (* r r))))'))
 // console.log(eval('(define fact (lambda(x)(if(<= x 1) 1 (* x ( fact(- x 1 ) ) ))))'))
 // console.log(eval('(define sum (lambda(x y) (+ x y) ) )'))
 //  console.log(eval('(define fib (lambda (n) (if (< n 2) 1 (+ (fib (- n 1)) (fib (- n 2))))))'))
@@ -289,7 +282,8 @@ const lambdaEval = (expr , env = globalEnv) => {
 // console.log(eval('(- 2 )'))
 // console.log(eval('(circlearea (fact (fact 3)) )'))
 console.log(eval('(define repeat (lambda (f) (lambda (x) (f (f x)))))'))
+
 console.log(eval('(define twice (lambda (x) (* 2 x)))'))
-console.log(eval('((repeat(repeat twice))10)'))
+console.log(eval('((repeat twice)10)'))
 //  console.log(eval('( define k ( lambda(y) (lambda (m)(+ m y) ) ) )'))
 // console.log(eval('((k 10) 20)'))
