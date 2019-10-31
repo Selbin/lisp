@@ -262,7 +262,6 @@ const lambdaEval = (expr , env = globalEnv) => {
     expr = spaceParser(expr)
     i++
   }
-  // funcObj.parent = copyEnv
   if(expr[0] !== ')') return null
   return sExpressionParser(funcObj['body'], funcObj)
 }
