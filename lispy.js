@@ -280,25 +280,29 @@ const lambdaEval = (expr , env = globalEnv) => {
     i++
   }
   if(expr[0] !== ')') return null
-  return sExpressionParser(funcObj['body'], funcObj)
+  let rslt = sExpressionParser(funcObj['body'], funcObj)
+  rslt[0].m = 20
+  console.log(rslt[0].body)
+  console.log(sExpressionParser(rslt[0].body,rslt[0]))
+
 }
 
 
- console.log(eval('(define circlearea (lambda (r) (* pi (* r r))))'))
-console.log(eval('(define fact (lambda(x)(if(<= x 1) 1 (* x ( fact(- x 1 ) ) ))))'))
-console.log(eval('(define sum (lambda(x y) (+ x y) ) )'))
- console.log(eval('(define fib (lambda (n) (if (< n 2) 1 (+ (fib (- n 1)) (fib (- n 2))))))'))
- console.log(eval('( fib 5 )'))
-console.log(eval('(sum (+(fact (- 6 1) ) (fact 5)) 5 )'))
-console.log(eval('(+ 2 3 (* 5 2 (* 1 2 ) ) 4 5 )'))
-console.log(eval('( if ( < 3 2 ) 3 (if (> 4 3 ) 33 44 ))'))
-console.log(eval('(circlearea (fact (fact 3)) )'))
-console.log (eval('( begin ( + 2 3 ) (+ 4 5 )  (define e 4444 ) (+ 100 100))'))
-console.log(eval('(quote ( begin ( + 2 3 ) (+ 4 5 )  (define e 4444 ) (+ 100 100)) )'))
-console.log(eval('(- 2 )'))
-console.log(eval('(circlearea (fact (fact 3)) )'))
-console.log(eval('(define repeat (lambda (f) (lambda (x) (f (f x)))))'))
-console.log(eval('(define twice (lambda (x) (* 2 x)))'))
-console.log(eval('((repeat twice)10)'))
-//  console.log(eval('( define k (lambda(e) ( lambda(y) (lambda(m)(+ m y e) ) ) ))'))
-// console.log(eval('((k 2) 10)'))
+//  console.log(eval('(define circlearea (lambda (r) (* pi (* r r))))'))
+// console.log(eval('(define fact (lambda(x)(if(<= x 1) 1 (* x ( fact(- x 1 ) ) ))))'))
+// console.log(eval('(define sum (lambda(x y) (+ x y) ) )'))
+//  console.log(eval('(define fib (lambda (n) (if (< n 2) 1 (+ (fib (- n 1)) (fib (- n 2))))))'))
+//  console.log(eval('( fib 5 )'))
+// console.log(eval('(sum (+(fact (- 6 1) ) (fact 5)) 5 )'))
+// console.log(eval('(+ 2 3 (* 5 2 (* 1 2 ) ) 4 5 )'))
+// console.log(eval('( if ( < 3 2 ) 3 (if (> 4 3 ) 33 44 ))'))
+// console.log(eval('(circlearea (fact (fact 3)) )'))
+// console.log (eval('( begin ( + 2 3 ) (+ 4 5 )  (define e 4444 ) (+ 100 100))'))
+// console.log(eval('(quote ( begin ( + 2 3 ) (+ 4 5 )  (define e 4444 ) (+ 100 100)) )'))
+// console.log(eval('(- 2 )'))
+// console.log(eval('(circlearea (fact (fact 3)) )'))
+// console.log(eval('(define repeat (lambda (f) (lambda (x) (f (f x)))))'))
+// console.log(eval('(define twice (lambda (x) (* 2 x)))'))
+// console.log(eval('((repeat twice)10)'))
+ console.log(eval('( define k (lambda(e) ( lambda(y) (lambda(m)(+ m y e) ) ) ))'))
+console.log(eval('((k 2) 10)'))
