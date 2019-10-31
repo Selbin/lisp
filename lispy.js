@@ -117,7 +117,7 @@ const expressionParser = (expr, env = globalEnv) => {
     return procedurecall(expr, env)
   }
   if(!expr.length >= 1 ) return null
-  let atom = atomParse(expr, env) || symbolParser(expr,env)
+  let atom = atomParse(expr, env) 
   if (!atom) return null
   return [atom[0], atom[1]]
 }
@@ -280,11 +280,7 @@ const lambdaEval = (expr , env = globalEnv) => {
     i++
   }
   if(expr[0] !== ')') return null
-  let rslt = sExpressionParser(funcObj['body'], funcObj)
-  rslt[0].m = 20
-  console.log(rslt[0].body)
-  console.log(sExpressionParser(rslt[0].body,rslt[0]))
-
+  return [sExpressionParser(funcObj['body'], funcObj)[0],spaceParser(expr.slice(1))]
 }
 
 
@@ -301,8 +297,9 @@ const lambdaEval = (expr , env = globalEnv) => {
 // console.log(eval('(quote ( begin ( + 2 3 ) (+ 4 5 )  (define e 4444 ) (+ 100 100)) )'))
 // console.log(eval('(- 2 )'))
 // console.log(eval('(circlearea (fact (fact 3)) )'))
-// console.log(eval('(define repeat (lambda (f) (lambda (x) (f (f x)))))'))
-// console.log(eval('(define twice (lambda (x) (* 2 x)))'))
-// console.log(eval('((repeat twice)10)'))
- console.log(eval('( define k (lambda(e) ( lambda(y) (lambda(m)(+ m y e) ) ) ))'))
-console.log(eval('((k 2) 10)'))
+console.log(eval('(define repeat (lambda (f) (lambda (x) (f (f x)))))'))
+console.log(eval('(define twice (lambda (x) (* 2 x)))'))
+ console.log(eval('(repeat (repeat twice))'))
+console.log(eval('( define k (lambda (ff) (lambda (e)( lambda(y) (lambda(m)(+ m y ff e) )) )))'))
+console.log(eval('((((k 2) 10) 20)100)'))
+ 
