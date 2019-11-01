@@ -15,12 +15,8 @@ let copyEnv = {}
 const findFunc = (op, env = globalEnv) => {
   try {
     do {
-      try {
-        if (env[op] !== undefined) return env
-        env = env.parent
-      } catch (error) {
-        env = env.parent
-      }
+      if (env[op] !== undefined) return env
+      env = env.parent
     } while (env.parent !== null || env.parent !== undefined)
     return null
   }
@@ -33,12 +29,8 @@ const findVal = (op, env = globalEnv) => {
   op = symbolParser(op)
   try {
     do {
-      try {
-        if (env[op[0]] !== undefined) return [env[op[0]], op[1]]
-        env = env.parent
-      } catch (error) {
-        env = env.parent
-      }
+      if (env[op[0]] !== undefined) return [env[op[0]], op[1]]
+      env = env.parent
     } while (env.parent !== null || env.parent !== undefined)
     return null
   }
@@ -135,13 +127,10 @@ const procedurecall = (expr, env = globalEnv) => {
     while (expr[0] !== ')') {
       expr = spaceParser(expr)
       const value = sExpressionParser(expr, env) || numberParser(expr) || atomParse(expr, env)
-      if (value !== null) {
+      if (!value) return null
         expr = value[1]
         expr = spaceParser(expr)
         operands.push(value[0])
-        continue
-      }
-      return null
     }
     if (operands.length === 1 && op === '/ ') operands.unshift(1)
     if (operands.length === 1 && op === '- ') operands.unshift(0)
@@ -278,7 +267,6 @@ const lambdaEval = (expr, env = globalEnv) => {
   return [result[0], spaceParser(expr.slice(1))]
 }
 
-
 console.log(eval('(define circlearea (lambda (r) (* pi (* r r))))'))
 console.log(eval('(define fact (lambda(x)(if(<= x 1) 1 (* x ( fact(- x 1 ) ) ))))'))
 console.log(eval('(define sum (lambda(x y) (+ x y) ) )'))
@@ -290,7 +278,7 @@ console.log(eval('( if ( < 3 2 ) 3 (if (> 4 3 ) 33 44 ))'))
 console.log(eval('(circlearea (fact (fact 3)) )'))
 console.log(eval('( begin ( + 2 3 ) (+ 4 5 )  (define e 4444 ) (+ 100 100))'))
 console.log(eval('(quote ( begin ( + 2 3 ) (+ 4 5 )  (define e 4444 ) (+ 100 100)) )'))
-console.log(eval('(- 2 )'))
+console.log(eval('(- 2 (/ 2))'))
 console.log(eval('(circlearea (fact (fact 3)) )'))
 console.log(eval('(define repeat (lambda (f) (lambda (x) (f (f x)))))'))
 console.log(eval('(define twice (lambda (x) (* 2 x)))'))
